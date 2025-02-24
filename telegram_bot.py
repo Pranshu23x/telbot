@@ -2,11 +2,13 @@ import os
 import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 # Replace with your Telegram Bot Token
-TELEGRAM_BOT_TOKEN = '7420321518:AAHS0xJL3HXfBd-G3EkbWbG9rznAQPJfBfs'
+TELEGRAM_BOT_TOKEN = os.getenv('7420321518:AAHS0xJL3HXfBd-G3EkbWbG9rznAQPJfBfs')
 # Replace with your Gemini API key
-GEMINI_API_KEY = 'AIzaSyA0MUWVJyg4K13q3JGPgKzUzUoN8_hd_vU'
+GEMINI_API_KEY = os.getenv('AIzaSyA0MUWVJyg4K13q3JGPgKzUzUoN8_hd_vU')
 # Replace with the Gemini API endpoint
 GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}'
 
@@ -87,8 +89,25 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     print(f"Sending response: {bot_response}")  # Debug log
     await update.message.reply_text(bot_response)
 
-# Main function to start the bot
+# Simple HTTP server to satisfy Render's port binding requirement
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Telegram Bot is running!")
+
+def run_http_server():
+    server = HTTPServer(('0.0.0.0', 8080), SimpleHTTPRequestHandler)
+    print("HTTP server running on port 8080...")
+    server.serve_forever()
+
+# Main function to start the bot and HTTP server
 def main() -> None:
+    # Start the HTTP server in a separate thread
+    http_thread = threading.Thread(target=run_http_server)
+    http_thread.daemon = True
+    http_thread.start()
+
     # Set up the Telegram bot
     print("Setting up the bot...")  # Debug log
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
