@@ -5,11 +5,11 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 
-# Replace with your Telegram Bot Token
-TELEGRAM_BOT_TOKEN = os.getenv('7420321518:AAHS0xJL3HXfBd-G3EkbWbG9rznAQPJfBfs')
-# Replace with your Gemini API key
-GEMINI_API_KEY = os.getenv('AIzaSyA0MUWVJyg4K13q3JGPgKzUzUoN8_hd_vU')
-# Replace with the Gemini API endpoint
+# Telegram Bot Token
+TELEGRAM_BOT_TOKEN = '7420321518:AAHS0xJL3HXfBd-G3EkbWbG9rznAQPJfBfs'
+
+# Gemini API Key and Endpoint
+GEMINI_API_KEY = 'AIzaSyA0MUWVJyg4K13q3JGPgKzUzUoN8_hd_vU'
 GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}'
 
 # Add custom responses
