@@ -110,4 +110,26 @@ async def error_handler(update: Update, context: CallbackContext) -> None:
 # Main function to start the bot
 def main() -> None:
     # Set up the Telegram bot
-    logger.info("Setting up the bot...")
+    logger.info("Setting up the bot...")  # Debug log
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Add handlers for commands and messages
+    logger.info("Adding handlers...")  # Debug log
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    # Add error handler
+    application.add_error_handler(error_handler)
+
+    # Start the bot
+    logger.info("Bot is running...")  # Debug log
+    application.run_polling()
+
+if __name__ == '__main__':
+    # Start Flask in a separate thread
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=8080))
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # Start the bot
+    main()
