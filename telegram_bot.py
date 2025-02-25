@@ -3,6 +3,7 @@ import logging
 from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import google.generativeai as genai
 
 # Enable logging
 logging.basicConfig(
@@ -11,7 +12,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Replace with your tokens
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_BOT_TOKEN = os.getenv("7878301039:AAF0b5EMAQpJoMt2gVLfnriJr3Dk8J0YqVw")
+GEMINI_API_KEY = os.getenv("AIzaSyDd4KHxCemlf-uriZVDK9g0ZtqyLdxAmoc")
+
+# Configure Gemini API
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-pro')
 
 # Flask app for binding to a port
 app = Flask(__name__)
@@ -22,13 +28,23 @@ def home():
 
 # Command handler for /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! I'm your bot. Send me a message, and I'll respond!")
+    await update.message.reply_text("Hello! I'm your Gemini-powered bot. Send me a message, and I'll respond!")
 
 # Message handler for all text messages
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Received message: {update.message.text}")
     user_message = update.message.text
-    await update.message.reply_text(f"You said: {user_message}")
+
+    # Get response from Gemini API
+    try:
+        response = model.generate_content(user_message)
+        bot_response = response.text
+    except Exception as e:
+        logger.error(f"Error generating Gemini response: {e}")
+        bot_response = "Sorry, I couldn't generate a response. Please try again."
+
+    # Send response back to Telegram
+    await update.message.reply_text(bot_response)
 
 # Error handler
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
