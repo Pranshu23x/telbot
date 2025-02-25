@@ -13,7 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Replace with your Telegram Bot Token
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7878301039:AAF0b5EMAQpJoMt2gVLfnriJr3Dk8J0YqVw")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7871400274:AAEZO-NuGH9ObxJi6SRLU2JvKoa_Rqngc4c")
 # Replace with your Gemini API key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyD4JRYC-y72C3SvZ1FUW3l_J6tE2Z-k1j4")
 # Replace with the Gemini API endpoint
