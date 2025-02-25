@@ -4,6 +4,13 @@ from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import threading
+import logging
+
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # Replace with your Telegram Bot Token
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7878301039:AAF0b5EMAQpJoMt2gVLfnriJr3Dk8J0YqVw")
@@ -49,13 +56,13 @@ def home():
 
 # Command to start the bot
 async def start(update: Update, context: CallbackContext) -> None:
-    print("Received /start command")  # Debug log
+    logger.info("Received /start command")  # Debug log
     await update.message.reply_text('Hello! I am your AI-powered assistant. How can I assist you today?')
 
 # Handle incoming messages
 async def handle_message(update: Update, context: CallbackContext) -> None:
     user_message = update.message.text
-    print(f"Received message: {user_message}")  # Debug log
+    logger.info(f"Received message: {user_message}")  # Debug log
 
     # Convert user message to lowercase for case-insensitive matching
     user_message_lower = user_message.lower()
@@ -82,40 +89,25 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             ]
         }
         try:
-            print("Sending request to AI API...")  # Debug log (generic term)
+            logger.info("Sending request to AI API...")  # Debug log (generic term)
             response = requests.post(GEMINI_API_URL, headers=headers, json=data)
-            print(f"API response: {response.status_code}, {response.text}")  # Debug log
+            logger.info(f"API response: {response.status_code}, {response.text}")  # Debug log
             if response.status_code == 200:
                 bot_response = response.json()['candidates'][0]['content']['parts'][0]['text']
             else:
                 bot_response = "Sorry, I encountered an error processing your request."
         except Exception as e:
             bot_response = "Sorry, I am unable to process your request at the moment."
-            print(f"Exception: {str(e)}")  # Debug log
+            logger.error(f"Exception: {str(e)}")  # Debug log
 
-    print(f"Sending response: {bot_response}")  # Debug log
+    logger.info(f"Sending response: {bot_response}")  # Debug log
     await update.message.reply_text(bot_response)
+
+# Error handler
+async def error_handler(update: Update, context: CallbackContext) -> None:
+    logger.error(f"Update {update} caused error {context.error}")
 
 # Main function to start the bot
 def main() -> None:
     # Set up the Telegram bot
-    print("Setting up the bot...")  # Debug log
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-
-    # Add handlers for commands and messages
-    print("Adding handlers...")  # Debug log
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Start the bot
-    print("Bot is running...")  # Debug log
-    application.run_polling()
-
-if __name__ == '__main__':
-    # Start Flask in a separate thread
-    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=8080))
-    flask_thread.daemon = True
-    flask_thread.start()
-
-    # Start the bot
-    main()
+    logger.info("Setting up the bot...")
