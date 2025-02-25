@@ -1,23 +1,44 @@
 import os
-import logging
+import requests
 from flask import Flask
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-import google.generativeai as genai
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+import threading
 
-# Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+# Replace with your Telegram Bot Token
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "your-telegram-bot-token")
+# Replace with your Gemini API key
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your-gemini-api-token")
+# Replace with the Gemini API endpoint
+GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}'
 
-# Replace with your tokens
-TELEGRAM_BOT_TOKEN = os.getenv("7878301039:AAF0b5EMAQpJoMt2gVLfnriJr3Dk8J0YqVw")
-GEMINI_API_KEY = os.getenv("AIzaSyDd4KHxCemlf-uriZVDK9g0ZtqyLdxAmoc")
+# Add custom responses
+CUSTOM_RESPONSES = {
+    # Ownership-related questions
+    "who is your owner": "Pranshu",
+    "who owns you": "Pranshu",
+    "who is your creator": "Pranshu",
+    "who made you": "Pranshu",
+    "who created you": "Pranshu",
 
-# Configure Gemini API
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+    # Language model or technical questions
+    "on which language model are you running": "I am powered by advanced AI technology, but my owner has disabled specific details about my model.",
+    "what language model are you using": "I am powered by advanced AI technology, but my owner has disabled specific details about my model.",
+    "what is your model": "I am powered by advanced AI technology, but my owner has disabled specific details about my model.",
+    "tell me about your model": "I am powered by advanced AI technology, but my owner has disabled specific details about my model.",
+    "how do you work": "I use advanced AI technology to assist you, but my owner has disabled specific technical details.",
+    "what technology do you use": "I use advanced AI technology, but my owner has disabled specific details about my underlying systems.",
+
+    # Owner description questions
+    "tell me about your owner": "Pranshu is a B.Tech 1st-year student.",
+    "who is pranshu": "Pranshu is a B.Tech 1st-year student.",
+    "describe your owner": "Pranshu is a B.Tech 1st-year student.",
+
+    # Comparison-based questions
+    "compare yourself to other ais": "I am not here to be compared. My purpose is to assist you!",
+    "are you better than other ais": "I am not here to be compared. My purpose is to assist you!",
+    "how are you different from other ais": "I am not here to be compared. My purpose is to assist you!",
+}
 
 # Flask app for binding to a port
 app = Flask(__name__)
@@ -26,48 +47,71 @@ app = Flask(__name__)
 def home():
     return "Bot is running!"
 
-# Command handler for /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! I'm your Gemini-powered bot. Send me a message, and I'll respond!")
+# Command to start the bot
+async def start(update: Update, context: CallbackContext) -> None:
+    print("Received /start command")  # Debug log
+    await update.message.reply_text('Hello! I am your AI-powered assistant. How can I assist you today?')
 
-# Message handler for all text messages
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"Received message: {update.message.text}")
+# Handle incoming messages
+async def handle_message(update: Update, context: CallbackContext) -> None:
     user_message = update.message.text
+    print(f"Received message: {user_message}")  # Debug log
 
-    # Get response from Gemini API
-    try:
-        response = model.generate_content(user_message)
-        bot_response = response.text
-    except Exception as e:
-        logger.error(f"Error generating Gemini response: {e}")
-        bot_response = "Sorry, I couldn't generate a response. Please try again."
+    # Convert user message to lowercase for case-insensitive matching
+    user_message_lower = user_message.lower()
 
-    # Send response back to Telegram
+    # Check if the message matches any custom response
+    for question, answer in CUSTOM_RESPONSES.items():
+        if question in user_message_lower:
+            bot_response = answer
+            break
+    else:
+        # Call Gemini API for other queries (without revealing details)
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": user_message
+                        }
+                    ]
+                }
+            ]
+        }
+        try:
+            print("Sending request to AI API...")  # Debug log (generic term)
+            response = requests.post(GEMINI_API_URL, headers=headers, json=data)
+            print(f"API response: {response.status_code}, {response.text}")  # Debug log
+            if response.status_code == 200:
+                bot_response = response.json()['candidates'][0]['content']['parts'][0]['text']
+            else:
+                bot_response = "Sorry, I encountered an error processing your request."
+        except Exception as e:
+            bot_response = "Sorry, I am unable to process your request at the moment."
+            print(f"Exception: {str(e)}")  # Debug log
+
+    print(f"Sending response: {bot_response}")  # Debug log
     await update.message.reply_text(bot_response)
 
-# Error handler
-async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"Update {update} caused error {context.error}")
-
 # Main function to start the bot
-def main():
-    logger.info("Starting bot...")
-    telegram_app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+def main() -> None:
+    # Set up the Telegram bot
+    print("Setting up the bot...")  # Debug log
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Add handlers
-    telegram_app.add_handler(CommandHandler("start", start))
-    telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    telegram_app.add_error_handler(error)
+    # Add handlers for commands and messages
+    print("Adding handlers...")  # Debug log
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Start polling (only once)
-    logger.info("Polling...")
-    telegram_app.run_polling()
+    # Start the bot
+    print("Bot is running...")  # Debug log
+    application.run_polling()
 
-# Run Flask and the bot
-if __name__ == "__main__":
-    import threading
-
+if __name__ == '__main__':
     # Start Flask in a separate thread
     flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=8080))
     flask_thread.daemon = True
